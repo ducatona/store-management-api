@@ -1,0 +1,16 @@
+# Ignorar configuración de IntelliJ IDEA
+.idea/
+*.iml
+
+# Ignorar configuración de Maven Wrapper
+.mvn/
+mvnw
+mvnw.cmd
+
+# Ignorar compilados y carpetas de build
+/target/
+*.class
+
+# Archivos temporales del sistema
+.DS_Store
+Thumbs.db
