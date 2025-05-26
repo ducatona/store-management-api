@@ -25,7 +25,7 @@ public class PurchaseControllerImpl implements IPurchaseController {
     }
 
 
-    @GetMapping("/")
+    @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<OrderResponse>> getAllPurchase() {
         return ResponseEntity.ok(service.getAllPurchases());

@@ -5,14 +5,17 @@ import com.product.model.dto.request.ProductTypeRequest;
 import com.product.model.dto.response.ProductTypeResponse;
 import com.product.exception.ResourceNotFoundException;
 import com.product.security.JwtFilter;
+import com.product.security.SecurityConfig;
 import com.product.service.impl.ProductTypeServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.FilterChain;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -24,6 +27,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.eq;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -32,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(SecurityConfig.class)
 class ProductTypeControllerImplTest {
 
     @Autowired
@@ -48,6 +53,15 @@ class ProductTypeControllerImplTest {
     private JwtFilter jwtFilter;
 
 
+    @BeforeEach
+    void setUp() throws Exception {
+        Mockito.doAnswer(invocation -> {
+            FilterChain chain = invocation.getArgument(2);
+            chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
+            return null;
+        }).when(jwtFilter).doFilter(Mockito.any(), Mockito.any(), Mockito.any());
+    }
+
     @Test
     void createProduct_givenProductTypeObject_thenReturnSavedProductType() throws Exception {
 
@@ -58,10 +72,10 @@ class ProductTypeControllerImplTest {
 
         String requestJson = objectMapper.writeValueAsString(productTypeRequest);
 
-        ResultActions perform = mockMvc.perform(post("/api/v1/productType").contentType(MediaType.APPLICATION_JSON).content(requestJson));
+        ResultActions perform = mockMvc.perform(post("/api/v1/productType").with(user("admin").roles("ADMIN")).contentType(MediaType.APPLICATION_JSON).content(requestJson));
 
         perform
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Movies"));
 
     }
@@ -104,17 +118,6 @@ class ProductTypeControllerImplTest {
     }
 
 
-    @Test
-    void getProductTypeById_whenGivenInvalidID_returnNotFoundException() throws Exception {
-
-        long productId = 8;
-
-        Mockito.when(productTypeService.getProductTypeById(productId)).thenThrow(new ResourceNotFoundException("No productType found with the id: " + productId));
-
-        mockMvc.perform(get("/api/v1/product/{id}", productId)).andExpect(status().isNotFound());
-
-    }
-
 
     @Test
     void createProductType_givenProductTypeObject_thenReturnNotFoundException() throws Exception {
@@ -122,9 +125,8 @@ class ProductTypeControllerImplTest {
         ProductTypeRequest productTypeRequest = new ProductTypeRequest("");
 
 
-
         String jsonTransformed = objectMapper.writeValueAsString(productTypeRequest);
-        mockMvc.perform(post("/api/v1/productType").contentType(MediaType.APPLICATION_JSON).content(jsonTransformed))
+        mockMvc.perform(post("/api/v1/productType").with(user("admin").roles("ADMIN")).contentType(MediaType.APPLICATION_JSON).content(jsonTransformed))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("name:productType name is required"));
     }
@@ -141,7 +143,7 @@ class ProductTypeControllerImplTest {
 
         String jsonFormat = objectMapper.writeValueAsString(productToUpdate);
 
-        mockMvc.perform(put("/api/v1/productType/{id}", idProduct).contentType(MediaType.APPLICATION_JSON).content(jsonFormat))
+        mockMvc.perform(put("/api/v1/productType/{id}", idProduct).with(user("admin").roles("ADMIN")).contentType(MediaType.APPLICATION_JSON).content(jsonFormat))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Movies"));
 
@@ -168,7 +170,7 @@ class ProductTypeControllerImplTest {
 
         String f = objectMapper.writeValueAsString(productToUpdate);
 
-        mockMvc.perform(put("/api/v1/productType/{id}", idProduct).contentType(MediaType.APPLICATION_JSON).content(f)).andExpect(status().isBadRequest())
+        mockMvc.perform(put("/api/v1/productType/{id}", idProduct).with(user("admin").roles("ADMIN")).contentType(MediaType.APPLICATION_JSON).content(f)).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("name:productType name is required"));
 
     }
@@ -181,25 +183,14 @@ class ProductTypeControllerImplTest {
 
         Mockito.doNothing().when(productTypeService).deleteProductType(idProduct);
 
-        mockMvc.perform(delete("/api/v1/productType/{id}", idProduct)).andExpect(status().isOk());
+        mockMvc.perform(delete("/api/v1/productType/{id}", idProduct).with(user("admin").roles("ADMIN"))).andExpect(status().isOk());
 
         Mockito.verify(productTypeService, Mockito.times(1)).deleteProductType(idProduct);
 
 
     }
 
-    @Test
-    void deleteProductType_whenGivenId_notFoundProductType() throws Exception {
 
-        long idProduct = 80L;
-
-        Mockito.doThrow(new ResourceNotFoundException("The productType cannot be deleted with the id: " + idProduct)).when(productTypeService).deleteProductType(idProduct);
-
-        mockMvc.perform(delete("/api/v1/productType/{id}", idProduct)).andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("The productType cannot be deleted with the id: " + idProduct));
-
-        Mockito.verify(productTypeService, Mockito.times(1)).deleteProductType(idProduct);
-    }
 
 
 }

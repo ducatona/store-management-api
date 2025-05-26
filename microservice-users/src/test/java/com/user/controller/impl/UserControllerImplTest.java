@@ -6,15 +6,18 @@ import com.user.model.dto.response.UserResponse;
 import com.user.exception.ResourceNotFoundException;
 import com.user.repository.IUserRepository;
 import com.user.security.JwtFilter;
+import com.user.security.SecurityConfig;
 import com.user.service.impl.UserServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.FilterChain;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,12 +29,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@ExtendWith(MockitoExtension.class)
-@WebMvcTest(UserControllerImpl.class)
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@Import(SecurityConfig.class)
 class UserControllerImplTest {
 
 
@@ -56,6 +62,15 @@ class UserControllerImplTest {
     @MockitoBean
     private JwtFilter jwtFilter;
 
+    @BeforeEach
+    void setUp() throws Exception {
+        Mockito.doAnswer(invocation -> {
+            FilterChain chain = invocation.getArgument(2);
+            chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
+            return null;
+        }).when(jwtFilter).doFilter(Mockito.any(), Mockito.any(), Mockito.any());
+    }
+
     @Test
     void getAllUsers_whenUsersExists_returnListOfUsers() throws Exception {
 
@@ -67,7 +82,7 @@ class UserControllerImplTest {
 
         Mockito.when(service.getAllUsers()).thenReturn(listOfUsers);
 
-        ResultActions perform = mockMvc.perform(get("/api/v1/user"));
+        ResultActions perform = mockMvc.perform(get("/api/v1/user").with(user("admin").roles("ADMIN")));
 
         perform
                 .andExpect(status().isOk())
@@ -126,7 +141,7 @@ class UserControllerImplTest {
 
         String objectToString = objectMapper.writeValueAsString(request);
 
-        mockMvc.perform(post("/api/v1/user").contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post("/api/v1/user").with(user("admin").roles("ADMIN")).contentType(MediaType.APPLICATION_JSON)
                         .content(objectToString))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1l));
@@ -143,7 +158,7 @@ class UserControllerImplTest {
 
         String objecTostring = objectMapper.writeValueAsString(request);
 
-        ResultActions perform = mockMvc.perform(post("/api/v1/user").contentType(MediaType.APPLICATION_JSON).content(objecTostring));
+        ResultActions perform = mockMvc.perform(post("/api/v1/user").with(user("admin").roles("ADMIN")).contentType(MediaType.APPLICATION_JSON).content(objecTostring));
 
         perform.andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("name:Cannot be null or empty"));
@@ -167,7 +182,7 @@ class UserControllerImplTest {
 
         String objectToString = objectMapper.writeValueAsString(request);
 
-        mockMvc.perform(put("/api/v1/user/{id}", idUser).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(put("/api/v1/user/{id}", idUser).with(user("admin").roles("ADMIN")).contentType(MediaType.APPLICATION_JSON)
                         .content(objectToString))
                 .andExpect(status().isOk());
     }
@@ -187,7 +202,7 @@ class UserControllerImplTest {
 
         String objectToString = objectMapper.writeValueAsString(request);
 
-        mockMvc.perform(put("/api/v1/user/{id}", idUser).contentType(MediaType.APPLICATION_JSON).content(objectToString)).andExpect(status().isNotFound())
+        mockMvc.perform(put("/api/v1/user/{id}", idUser).with(user("admin").roles("ADMIN")).contentType(MediaType.APPLICATION_JSON).content(objectToString)).andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("User not found with id: " + idUser));
 
 
@@ -204,7 +219,7 @@ class UserControllerImplTest {
 
         String objectToString = objectMapper.writeValueAsString(request);
 
-        mockMvc.perform(put("/api/v1/user/{id}", idUser).contentType(MediaType.APPLICATION_JSON).content(objectToString)).andExpect(status().isBadRequest())
+        mockMvc.perform(put("/api/v1/user/{id}", idUser).with(user("admin").roles("ADMIN")).contentType(MediaType.APPLICATION_JSON).content(objectToString)).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("name:Cannot be null or empty"));
 
 
@@ -222,7 +237,7 @@ class UserControllerImplTest {
 
         String objectToString = objectMapper.writeValueAsString(request);
 
-        mockMvc.perform(put("/api/v1/user/{id}", idUser).contentType(MediaType.APPLICATION_JSON).content(objectToString)).andExpect(status().isBadRequest())
+        mockMvc.perform(put("/api/v1/user/{id}", idUser).with(user("admin").roles("ADMIN")).contentType(MediaType.APPLICATION_JSON).content(objectToString)).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("email:must be a well-formed email address"));
 
     }
@@ -234,7 +249,7 @@ class UserControllerImplTest {
 
         Mockito.doThrow(new ResourceNotFoundException("The user cannot be deleted with the id: " + idUser)).when(service).deleteUser(idUser);
 
-        mockMvc.perform(delete("/api/v1/user/{id}", idUser)).andExpect(status().isNotFound());
+        mockMvc.perform(delete("/api/v1/user/{id}", idUser).with(user("admin").roles("ADMIN"))).andExpect(status().isNotFound());
 
         Mockito.verify(service, Mockito.times(1)).deleteUser(idUser);
 
@@ -248,7 +263,7 @@ class UserControllerImplTest {
 
         Mockito.doNothing().when(service).deleteUser(idUser);
 
-        mockMvc.perform(delete("/api/v1/user/{id}", idUser)).andExpect(status().isOk());
+        mockMvc.perform(delete("/api/v1/user/{id}", idUser).with(user("admin").roles("ADMIN"))).andExpect(status().isOk());
 
         Mockito.verify(service, Mockito.times(1)).deleteUser(idUser);
 

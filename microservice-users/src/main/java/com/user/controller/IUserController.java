@@ -24,11 +24,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import java.util.List;
 import java.util.Optional;
 
-@OpenAPIDefinition(info = @Info(title = "API Documentation",version = "1.0", description = "API dedicated to user management"))
+@OpenAPIDefinition(info = @Info(title = "API Documentation",version = "1.0", description = "API dedicated to user management"),security = @SecurityRequirement(name = "bearerAuth"))
+
 @Tag(name = "User Management", description = "API for managing user's")
 public interface IUserController {
 
-    @Operation(summary = "Get all Users", description = "User retrieved successfully",security = @SecurityRequirement(name = "bearerAuth"))
+    @Operation(summary = "Get all Users", description = "User retrieved successfully")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User find successfully",
                     content = @Content(schema = @Schema(implementation = UserResponse.class)))

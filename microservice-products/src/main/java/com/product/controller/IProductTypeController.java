@@ -5,18 +5,21 @@ import com.product.model.dto.response.ProductResponse;
 import com.product.model.dto.response.ProductTypeResponse;
 import com.product.exception.ApiError;
 import com.product.exception.ResourceNotFoundException;
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 
 
 import java.util.List;
 import java.util.Optional;
-
+@OpenAPIDefinition(info = @Info(title = "API Documentation",version = "1.0", description = "API dedicated to ProductType management"),security = @SecurityRequirement(name = "bearerAuth"))
 @Tag(name = "ProductType Management", description = "API for managing productTypes")
 public interface IProductTypeController {
 

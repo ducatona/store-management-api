@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,7 +23,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import java.util.List;
 import java.util.Optional;
 
-@OpenAPIDefinition(info = @Info(title = "API Documentation",version = "1.0", description = "API dedicated to product management"))
+@OpenAPIDefinition(info = @Info(title = "API Documentation",version = "1.0", description = "API dedicated to product management"),security = @SecurityRequirement(name = "bearerAuth"))
 @Tag(name = "Product Management", description = "API for managing product")
 public interface IProductController {
 

@@ -1,4 +1,4 @@
-package com.auth.security.service;
+package com.auth.security.service.impl;
 
 import com.auth.security.client.UserClient;
 import com.auth.security.model.request.AuthRequest;
@@ -6,19 +6,20 @@ import com.auth.security.model.response.AuthResponse;
 import com.auth.security.model.response.UserResponseAuth;
 import com.auth.security.model.response.ValidateResponse;
 import com.auth.security.security.JwtUtil;
+import com.auth.security.service.IAuthService;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
-public class AuthService {
+public class AuthServiceImpl implements IAuthService {
 
 
     private final JwtUtil jwtUtil;
     private final UserClient userClient;
     private final PasswordEncoder passwordEncoder;
 
-    public AuthService(JwtUtil jwtUtil, UserClient userClient, PasswordEncoder passwordEncoder) {
+    public AuthServiceImpl(JwtUtil jwtUtil, UserClient userClient, PasswordEncoder passwordEncoder) {
         this.jwtUtil = jwtUtil;
         this.userClient = userClient;
         this.passwordEncoder = passwordEncoder;

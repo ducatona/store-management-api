@@ -27,16 +27,7 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
 
-    @ExceptionHandler(ServiceUnavailableError.class)
-    public ResponseEntity<ApiError> handleNotFound(ServiceUnavailableError ex) {
 
-        ApiError error = new ApiError(
-                HttpStatus.SERVICE_UNAVAILABLE.value(),
-                ex.getMessage(),
-                "Service unavailable"
-        );
-        return new ResponseEntity<>(error, HttpStatus.SERVICE_UNAVAILABLE);
-    }
 
     @ExceptionHandler(NegativeAmountException.class)
     public ResponseEntity<ApiError> handleNegative(NegativeAmountException ex) {
@@ -50,18 +41,8 @@ public class GlobalExceptionHandler {
     }
 
 
-/*
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiError> handleGenericError(Exception ex) {
 
-        ApiError error = new ApiError(
-                HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                ex.getMessage(),
-                "Internal system error."
-        );
-        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-*/
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidationError(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors()
@@ -77,16 +58,6 @@ public class GlobalExceptionHandler {
     }
 
 
-    @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<Map<String, String>> handleConstraintViolations(ConstraintViolationException ex) {
-        Map<String, String> errors = new HashMap<>();
 
-        ex.getConstraintViolations().forEach(violation -> {
-            errors.put(violation.getPropertyPath().toString(), violation.getMessage());
-        });
-
-        return ResponseEntity.badRequest().body(errors);
-
-    }
 
 }

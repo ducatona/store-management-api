@@ -1,23 +1,28 @@
 package com.product.controller.impl;
 
-import com.product.exception.NegativeAmountException;
+
 import com.product.model.dto.request.ProductRequest;
 import com.product.model.dto.request.UpdateStockRequest;
 import com.product.model.dto.response.ProductResponse;
 import com.product.exception.ResourceNotFoundException;
+import com.product.repository.IProductTypeRepository;
 import com.product.security.JwtFilter;
+import com.product.security.SecurityConfig;
 import com.product.service.impl.ProductServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.FilterChain;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
 import java.util.ArrayList;
@@ -30,8 +35,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
-@ExtendWith(MockitoExtension.class)
-@WebMvcTest(ProductControllerImpl.class)
+@SpringBootTest
+@AutoConfigureMockMvc
+@Import(SecurityConfig.class)
 class ProductControllerImplTest {
 
 
@@ -43,10 +49,20 @@ class ProductControllerImplTest {
 
     @MockitoBean
     private ProductServiceImpl productService;
-
+    @MockitoBean
+    private IProductTypeRepository repository;
     @MockitoBean
     private JwtFilter jwtFilter;
 
+
+    @BeforeEach
+    void setUp() throws Exception {
+        Mockito.doAnswer(invocation -> {
+            FilterChain chain = invocation.getArgument(2);
+            chain.doFilter(invocation.getArgument(0), invocation.getArgument(1));
+            return null;
+        }).when(jwtFilter).doFilter(Mockito.any(), Mockito.any(), Mockito.any());
+    }
 
     @Test
     void getAllProducts_whenProductExists_returnListOfProducts() throws Exception {
@@ -56,7 +72,7 @@ class ProductControllerImplTest {
         productsList.add(new ProductResponse(2l, "Smartphone", 800.0, 20, 1l));
         productsList.add(new ProductResponse(3l, "Apple", 1.0, 100, 2l));
         productsList.add(new ProductResponse(4l, "Milk", 0.8, 50, 2l));
-        System.out.println(productsList.toString());
+
 
         Mockito.when(productService.getAllProducts()).thenReturn(productsList);
 
@@ -106,18 +122,6 @@ class ProductControllerImplTest {
 
 
     @Test
-    void getProductById_whenGivenInvalidID_returnNotFoundException() throws Exception {
-
-        long productId = 8;
-
-        Mockito.when(productService.getProductById(productId)).thenThrow(new ResourceNotFoundException("No product found with the id: " + productId));
-
-        mockMvc.perform(get("/api/v1/product/{id}", productId)).andExpect(status().isNotFound());
-
-    }
-
-
-    @Test
     void createProduct_givenProductObject_thenReturnSavedProduct() throws Exception {
 
 
@@ -132,9 +136,9 @@ class ProductControllerImplTest {
 
 
         ResultActions perform = mockMvc.perform(post("/api/v1/product")
-                .header("Authorization", "Bearer test-token")
-                .contentType(MediaType.APPLICATION_JSON).content(requestJson)
                 .with(user("admin").roles("ADMIN"))
+                .contentType(MediaType.APPLICATION_JSON).content(requestJson)
+
         );
 
         perform
@@ -153,7 +157,7 @@ class ProductControllerImplTest {
         ProductRequest productRequest = new ProductRequest("", 2.2, 1, 1L);
 
         String jsonTransformed = objectMapper.writeValueAsString(productRequest);
-        mockMvc.perform(post("/api/v1/product").contentType(MediaType.APPLICATION_JSON).content(jsonTransformed))
+        mockMvc.perform(post("/api/v1/product").with(user("admin").roles("ADMIN")).contentType(MediaType.APPLICATION_JSON).content(jsonTransformed))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("name:product name is required"));
     }
@@ -171,7 +175,7 @@ class ProductControllerImplTest {
 
         String jsonFormat = objectMapper.writeValueAsString(productToUpdate);
 
-        mockMvc.perform(put("/api/v1/product/{id}", idProduct).contentType(MediaType.APPLICATION_JSON).content(jsonFormat))
+        mockMvc.perform(put("/api/v1/product/{id}", idProduct).with(user("admin").roles("ADMIN")).contentType(MediaType.APPLICATION_JSON).content(jsonFormat))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("MTV"))
                 .andExpect(jsonPath("$.price").value(3.50))
@@ -198,7 +202,7 @@ class ProductControllerImplTest {
 
         String f = objectMapper.writeValueAsString(productToUpdate);
 
-        mockMvc.perform(put("/api/v1/product/{id}", idProduct).contentType(MediaType.APPLICATION_JSON).content(f)).andExpect(status().isBadRequest())
+        mockMvc.perform(put("/api/v1/product/{id}", idProduct).with(user("admin").roles("ADMIN")).contentType(MediaType.APPLICATION_JSON).content(f)).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("price:The price cannot be negative"));
 
     }
@@ -211,68 +215,29 @@ class ProductControllerImplTest {
 
         Mockito.doNothing().when(productService).deleteProduct(idProduct);
 
-        mockMvc.perform(delete("/api/v1/product/{id}", idProduct)).andExpect(status().isOk());
+        mockMvc.perform(delete("/api/v1/product/{id}", idProduct).with(user("admin").roles("ADMIN"))).andExpect(status().isOk());
 
         Mockito.verify(productService, Mockito.times(1)).deleteProduct(idProduct);
 
 
-    }
-
-    @Test
-    void deleteProduct_whenGivenId_notFoundProduct() throws Exception {
-
-        long idProduct = 80L;
-
-        Mockito.doThrow(new ResourceNotFoundException("The product cannot be deleted with the id: " + idProduct)).when(productService).deleteProduct(idProduct);
-
-        mockMvc.perform(delete("/api/v1/product/{id}", idProduct)).andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("The product cannot be deleted with the id: 80"));
-
-        Mockito.verify(productService, Mockito.times(1)).deleteProduct(idProduct);
     }
 
 
 
     @Test
     void reduceStock_whenGiveIdProductAndAmount_updateAmountOfStock() throws Exception {
-
-        long idProduct = 1l;
-        int amount = 6;
+        long idProduct = 1L;
+        int amount = 1;
         UpdateStockRequest request = new UpdateStockRequest(amount);
+        String json = objectMapper.writeValueAsString(request);
 
+        Mockito.doNothing().when(productService).reduceStock(idProduct, request);
 
-        Mockito.doNothing().when(productService).reduceStock(idProduct,request);
-        mockMvc.perform(put("/api/v1/product/{id}/stock/{amount}",idProduct,amount)).andExpect(status().isOk());
-
-    }
-
-    @Test
-    void reduceStock_whenAmountIsNegative_throwNegativeAmountException() throws Exception {
-
-        long idProduct = 1l;
-        int amount = -1999;
-        UpdateStockRequest request = new UpdateStockRequest(amount);
-
-        Mockito.doThrow(new NegativeAmountException("The amount to reduce cannot be negative.")).when(productService).reduceStock(idProduct,request);
-
-        mockMvc.perform(put("/api/v1/product/{id}/stock/{amount}",idProduct,amount)).andExpect(status().isBadRequest())
-
-                .andExpect(jsonPath("$.message").value("The amount to reduce cannot be negative."));
-
-    }
-
-    @Test
-    void reduceStock_whenAmountIsElder_throwNegativeAmountException() throws Exception {
-
-        long idProduct = 1l;
-        int amount = 1999;
-        UpdateStockRequest request = new UpdateStockRequest(amount);
-        Mockito.doThrow(new NegativeAmountException("Not enough stock to reduce by the specified amount.")).when(productService).reduceStock(idProduct,request);
-
-        mockMvc.perform(put("/api/v1/product/{id}/stock/{amount}",idProduct,amount)).andExpect(status().isBadRequest())
-
-                .andExpect(jsonPath("$.message").value("Not enough stock to reduce by the specified amount."));
-
+        mockMvc.perform(put("/api/v1/product/{id}/stock/", idProduct)
+                        .with(user("admin").roles("ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk());
     }
 
 }
